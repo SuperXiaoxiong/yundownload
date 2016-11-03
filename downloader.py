@@ -5,7 +5,7 @@ Created on 2016年11月2日
 '''
 import requests
 from multiprocessing.dummy import Pool, Lock
-
+from progressbar import *
 
 class DownLoader(object):
     '''
@@ -13,13 +13,18 @@ class DownLoader(object):
     每一个任务下载一个区块，并写入文件
     '''
     
-    def __init__(self, url, file_path=None, block_size=1024):
+    def __init__(self, url, file_path, block_size=1024):
         self.url = url
         self.file_path = file_path
         self.block_size = block_size
         self.lock = Lock()
+        self.done = 0
+        self.length = self.get_length()
+        self.block_num = self.get_blocknum() 
+        self.pool = self.get_pool()
+        self.progress_show()
         
-    
+        
     def get_pool(self, process=None):
         
         if process and isinstance(process, int):
@@ -35,42 +40,53 @@ class DownLoader(object):
         
         res = requests.head(self.url)
         if res.ok:
-            length = int(res.headers.get('content-length', 0))
-            return length
+            self.length = int(res.headers.get('content-length', 0))
+            return self.length
         else:
-            length = 0
-            return length
+            self.length = 0
+            return self.length
         
         
-    def get_blocknum(self, length):
+    def get_blocknum(self):
         '''
         计算分块数量
         '''
-        self.block_num = int(length + self.block_size -1) / self.block_size #向上取整      
+        self.block_num = int(self.length + self.block_size -1) / self.block_size #向上取整      
+        return self.block_num
         
         
-    def get_ranges(self, length=0):
+    def get_ranges(self):
         '''
         计算分块下载时，各分块的下载范围
         '''
-        if length is not 0:
-            ranges = range(0, length, self.block_size)
-            ranges = [(start, start + self.block_size) for start in ranges]
-            return ranges
-        else:
-            return [(0,'')]
+        ranges = []
+        for i in range(self.block_num):
+            if i == self.block_num - 1:
+                ranges.append(( i * self.block_size, self.length))
+            else:
+                ranges.append(( i * self.block_size, (i + 1) * self.block_size))
+        return ranges
         
         
         
     def open_file(self):
-        #self.f = os.open(self.file_path, os.O_RDONLY|os.O_CREAT)
-        #self.f = os.fdopen(self.f, "w+")
         self.f = open(self.file_path, 'wb')
+     
         
     def close_file(self):
         self.f.close()
         
-                 
+      
+    def progress_show(self):
+        '''
+        进度条显示
+        '''
+        widgets = ['Progress: ', Percentage(), ' ', Bar(marker=RotatingMarker('>-=')),    \
+           ' ', ETA(), ' ', FileTransferSpeed()]      
+        self.pbar = ProgressBar(widgets=widgets, maxval=self.length).start()
+         
+         
+                    
     def download_block(self, range):
         '''
         单线程下载指定区块
@@ -80,21 +96,28 @@ class DownLoader(object):
         if res.ok:
             self.lock.acquire()            
             self.f.seek(range[0])
-            print  self.f.tell() , range[0]   
             self.f.write(res.content)
+            self.f.flush()
+            
+            if self.done == self.block_num - 1:
+                self.pbar.update(self.length-1)               
+            else:
+                self.pbar.update(self.block_size * self.done) 
+                
+            self.done = self.done + 1  
             self.lock.release()
         else:
             pass
         
         
     def download(self):
-        pool = self.get_pool()
-        length = self.get_length()
-        ranges = self.get_ranges(length)
+         
+        ranges = self.get_ranges()
         self.open_file()
-        pool.map(self.download_block, ranges)
-        pool.close() 
-        pool.join()
+        self.pool.map(self.download_block, ranges)
+        self.pool.close() 
+        self.pool.join()
+        self.pbar.finish()
         self.close_file()
         
         
