@@ -6,6 +6,11 @@ Created on 2016年11月2日
 import requests
 from multiprocessing.dummy import Pool, Lock
 from progressbar import *
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
+from copy import deepcopy
+from config import DEFAULT_HEADERS
+
+requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 class DownLoader(object):
     '''
@@ -13,7 +18,9 @@ class DownLoader(object):
     每一个任务下载一个区块，并写入文件
     '''
     
-    def __init__(self, url, file_path, block_size=1024):
+    def __init__(self, req, url, file_path, block_size=1024000):
+        
+        self.req = req
         self.url = url
         self.file_path = file_path
         self.block_size = block_size
@@ -38,7 +45,7 @@ class DownLoader(object):
         计算下载的总长度
         '''    
         
-        res = requests.head(self.url)
+        res = self.req.head(self.url, headers=DEFAULT_HEADERS, verify=False)
         if res.ok:
             self.length = int(res.headers.get('content-length', 0))
             return self.length
@@ -91,8 +98,9 @@ class DownLoader(object):
         '''
         单线程下载指定区块
         '''    
-        headers = {'Range': 'Bytes=%d-%d' % range}
-        res = requests.get(self.url, headers=headers)
+        headers = deepcopy(DEFAULT_HEADERS)
+        headers['Range'] = 'Bytes=%d-%d' % range
+        res = self.req.get(self.url, headers=headers, verify=False)
         if res.ok:
             self.lock.acquire()            
             self.f.seek(range[0])
