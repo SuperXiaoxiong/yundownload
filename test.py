@@ -9,6 +9,7 @@ import requests
 import net
 import sys
 import threading
+from auth import LoginWanpan
 
 def test_log():
     logger.info('test')
@@ -62,7 +63,35 @@ def test_simple_requests():
     else:
         print 'no'
         
-#test_download()
-test_download()
+def test_login():
+    login_wanpan = LoginWanpan()
+    login_wanpan.run()
 
+def qr_check():
+    import re
+    res = {"errInfo":{        "no": "0"    },    "data": {        "codeString" : "jxG7f06c1fe8571e21f022314d54301417e776a9807b9017bc7",        "vcodetype" : "4ea5vlvQPdjy2odW8u8ETdqBkGiN3YfP777DbFPoig9e0h9NfRN7s4lOqMzP42a61LAD5WR4EEJNtFqfa9AFRkqiCCCDXOxX8491",        "userid" : "",        "mobile" : ""    }}
     
+    res = str(res)
+    logger.debug(res)
+    print res
+    #\s*"vcodetype"\s*:\s*"(\w*)"
+    pm = re.search(r'\'codeString\'\s*:\s*\'(\w*)\',\s*\'vcodetype\'\s*:\s*\'(\w*)\'', res)
+    if pm:
+        codeString = pm.group(1)
+        vcodetype = pm.group(2)
+        print codeString,vcodetype
+        
+def key_check():
+    import re
+    res = r'-----BEGIN PUBLIC KEY-----\nMIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCtkCrB468BmyT\/dsXYYjC5hYqF\nKD3nO5SGUu33MH4Iw++uUyW5I8IppgXNWcXqvMrUyxuWg9Z\/ryRevCm4P4zMpyhs\nMpBOi81s6H8L8J6OeTyC3b4pkkHDVFPhZVBGLjMb3xB+KGB3o0rV5R1ohXDwooEN\nqHKmMROwGoaQBHk\/mQIDAQAB\n-----END PUBLIC KEY-----\n'
+    public_key = re.search(r'-----BEGIN PUBLIC KEY-----\n(.*?)-----END PUBLIC KEY-----\n', res)
+    print public_key.group(1)
+    
+    
+#test_log()
+#test_download()
+
+#key_check()
+test_login()
+
+        

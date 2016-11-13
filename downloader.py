@@ -8,7 +8,7 @@ from multiprocessing.dummy import Pool, Lock
 from progressbar import *
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 from copy import deepcopy
-from config import DEFAULT_HEADERS
+from config import DEFAULT_HEADERS, BLOCK_SIZE
 from log import logger
 from net import simple_request
 from email import Message
@@ -29,7 +29,7 @@ class DownLoader(object):
     每一个任务下载一个区块，并写入文件
     '''
     
-    def __init__(self, req, url, dirname, filename, block_size=1024):
+    def __init__(self, req, url, dirname, filename, block_size=BLOCK_SIZE):
         
         self.req = req
         self.url = url
