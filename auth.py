@@ -5,7 +5,7 @@ Created on 2016年11月5日
 '''
 import requests
 import copy
-from config import DEFAULT_HEADERS
+import config
 from log import logger
 import time
 import re
@@ -13,34 +13,31 @@ import os
 import sys
 import webbrowser
 import subprocess
-from tool import RSA_encrypt, json_loads_single
+import tool
 import random
+import json
+import pcs
+
+DELTA = 1 * 24 * 60 * 60
 
 def get_ppui_logintime():
     '''ppui_ligintime 这个字段, 是一个随机数.'''
     return str(random.randint(52000, 58535))
 
-proxies = {
-  "http": "http://127.0.0.1:8080",
-  "https": "http://127.0.0.1:8080",
-}
+
 
 class LoginWanpan():
     
     def __init__(self):
         self.req = requests.Session()
-        self.headers = copy.deepcopy(DEFAULT_HEADERS)
+        self.headers = copy.deepcopy(config.DEFAULT_HEADERS)
     
     
     def get_uid(self):
         '''
         "token" : "the fisrt two args should be string type:0,1!",
         '''
-        url = ''.join(['https://passport.baidu.com/v2/api/?',
-                       'getapi&tpl=netdisk&subpro=netdisk_web&apiver=v3',
-                       '&tt=', str(int(time.time())*1000),  
-                       '&class=login&logintype=basicLogin',    
-                       ])
+        url = 'https://yun.baidu.com'
         res = self.req.get(url=url, headers=self.headers, allow_redirects=False)
         
         
@@ -81,7 +78,7 @@ class LoginWanpan():
         '&isphone=false',
     ])
         res = self.req.get(url=url, headers=self.headers, allow_redirects=False)
-        logger.debug(res.content)
+        
         #pm = re.search(r'"codeString"\s*:\s*"(\w*)",\s*"vcodetype"\s*:\s*"(\w*)"', res.content)
         #,\s*\"vcodetype\"\s*:\s*\"(\w*)\"
         codeString = re.search(r'\"codeString\"\s*:\s*\"(\w*)\"', res.content)
@@ -148,8 +145,8 @@ class LoginWanpan():
         private_key = re.search(r'\"key\"\s*:\s*\'(\w*)\'', res.content)
         private_key = private_key.group(1)
         
-        res = json_loads_single(res.content)
-        print res
+        res = tool.json_loads_single(res.content)
+        
         
         with open('master-public.key', 'w') as f:
             f.write(res['pubkey'])
@@ -196,25 +193,57 @@ class LoginWanpan():
             'crypttype':12,
             'ppui_logintime':get_ppui_logintime(),
                         }
-        #res = self.req.post(url, data=data, headers=self.headers, proxies=proxies, verify=False)
+        #res = self.req.post(url, data=data, headers=self.headers, proxies=tool.proxies, verify=False)
         res = self.req.post(url, data=data, headers=self.headers)
         status = re.search(r'err_no=(\d+)', res.content) 
         vcodetype = re.search(r'vcodetype=(.*?)&', res.content)
-        logger.debug(res.content)
-        logger.debug(res.headers)
-        logger.debug(res.request.headers)
-        logger.debug(res.url)
+                        
+        tool.save_cookies_lwp(res.cookies, './cookies')
+        
         return int(status.group(1)), vcodetype.group(1)
     
-    def parse_bdstoken(self, content):
-        pass
     
     
-    def get_bdstoken(self,):
-        pass
-    
+    def get_bdstoken(self, req):
+        url = 'https://pan.baidu.com/disk/home'
+        res = req.get(url, headers=self.headers)
+        bdstoken = re.search(r'\"bdstoken\":"(\w+)\"', res.content) 
+        
+        logger.debug(res.url)
+        logger.debug(res.cookies)
+        logger.debug(res.request.headers)
+        logger.debug(res.headers)
+        
+        
+        
+        if bdstoken:
+            return bdstoken.group(1)
+        else:
+            return None
+        
+    def dump_auth(self, token):
+        auth_file = os.path.join('./token')
+        with open(auth_file, 'w') as fh:
+            json.dump([token], fh)
+
+
+
+    def load_auth(self):
+        auth_file = os.path.join('./token')
+        # 如果授权信息被缓存, 并且没过期, 就直接读取它.
+        if os.path.exists(auth_file):
+            if time.time() - os.stat(auth_file).st_mtime < DELTA:
+                with open(auth_file) as fh:
+                    token = json.load(fh)
+                #cookies = RequestCookie(c)
+                
+                return token
+        return None
+
+
     def run(self):
-        username = ''
+        username = config.USERNAME
+        password = config.PASSWORD
         
         self.get_uid()
         token = self.get_token()
@@ -222,15 +251,15 @@ class LoginWanpan():
         
         rsakey = self.get_public_key(token)
         
-        password_crypto = RSA_encrypt( '')
-        print password_crypto
+        password_crypto = tool.RSA_encrypt( password)
+        
         
         
         if codeString and vcodetype:
             self.get_signin_vcode(codeString)
             #verifyStr = self.refresh_signin_vcode(token, vcodetype)
             input_verify = raw_input(u'请输入验证码')
-            input_verify = input_verify.decode(sys.getfilesystemencoding()).encode('utf-8')
+            #input_verify = input_verify.decode(sys.getfilesystemencoding()).encode('utf-8')
             err_no, vcodetype = self.post_login(token, username, password_crypto, rsakey, input_verify, codeString)
         else:
             err_no = self.post_login(token, username, password_crypto, rsakey)
@@ -240,24 +269,31 @@ class LoginWanpan():
             codeString = self.refresh_signin_vcode(token, vcodetype)
             self.get_signin_vcode(codeString)
             input_verify = raw_input(u'请输入验证码')
-            input_verify = input_verify.decode(sys.getfilesystemencoding())
+            #input_verify = input_verify.decode(sys.getfilesystemencoding()).encode('utf-8')
             err_no, vcodetype = self.post_login(token, username, password_crypto, rsakey, input_verify, codeString)
             
         while err_no == 6:
             #验证码错误
+            
+            '''
+            从返回中获取vcodetype
+            '''
+            pass
+            '''
             codeString = self.refresh_signin_vcode(token, vcodetype)
             self.get_signin_vcode(codeString)
             input_verify = raw_input(u'请输入验证码')
-            input_verify = input_verify.decode(sys.getfilesystemencoding())
+            #input_verify = input_verify.decode(sys.getfilesystemencoding()).encode('utf-8')
             err_no, vcodetype = self.post_login(token, username, password_crypto, rsakey, input_verify, codeString)
+            '''
+            
+            
         
-        logger.debug(err_no)
          
         if err_no == 0:
-            url = 'https://pan.baidu.com/disk/home'
-            res = self.req.get(url, headers=self.headers)
-            logger.debug(res.content)
-            logger.debug(res.headers)
-            logger.debug(res.history)
+            bdstoken = self.get_bdstoken(self.req)
             
-           
+            self.dump_auth(token)
+            
+            pcs.list_dir(self.req, headers=self.headers, bdstoken=bdstoken, path=r'/')
+            return self.req

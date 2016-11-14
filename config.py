@@ -5,6 +5,9 @@ Created on 2016年11月5日
 '''
 import os
 
+USERNAME = ''
+PASSWORD = ''
+
 LOGGING_LEVEL = 'DEBUG'
 LOGGING_FILE = os.path.expanduser(r'./.config/yundownload/yundownload.log')
 

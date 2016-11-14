@@ -10,6 +10,11 @@ import net
 import sys
 import threading
 from auth import LoginWanpan
+import pcs
+import tool
+import os
+import config
+
 
 def test_log():
     logger.info('test')
@@ -65,7 +70,22 @@ def test_simple_requests():
         
 def test_login():
     login_wanpan = LoginWanpan()
-    login_wanpan.run()
+    
+    
+    token = login_wanpan.load_auth()
+    if os.path.exists('./cookies'):
+        cookies = tool.load_cookies_from_lwp('./cookies')
+        print cookies
+        print token
+        req = requests.Session()
+        req.cookies = cookies
+        bdstoken = login_wanpan.get_bdstoken(req)
+        pcs.list_dir(req, bdstoken=bdstoken, headers=config.DEFAULT_HEADERS, path=r'/')
+    else:
+        login_wanpan.run()
+       
+    #req = login_wanpan.run()
+    
 
 def qr_check():
     import re
