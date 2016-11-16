@@ -100,7 +100,7 @@ class LoginWanpan():
         data = res.content
         with open('./qrimg.png', 'wb') as img:
             img.write(data)
-        qr_path = '.'.join([os.getcwd(),'qrimg'])
+        qr_path = '.'.join(['file:///',os.getcwd(),'qrimg.png'])
         if sys.platform.startswith('win'):
             webbrowser.open(qr_path)
         elif sys.platform.find('linux')>= 0 and self.graph:
@@ -296,4 +296,4 @@ class LoginWanpan():
             self.dump_auth(token)
             
             pcs.list_dir(self.req, headers=self.headers, bdstoken=bdstoken, path=r'/')
-            return self.req
+            return self.req, bdstoken
