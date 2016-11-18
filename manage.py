@@ -35,7 +35,7 @@ def test_login():
 
 
 def phelp():
-    print """
+    print u"""
     Welcome to yundownload!  This is the help utility.
     quit----------------------退出程序
     cd [路径]------------------切换目录
@@ -111,7 +111,7 @@ if __name__ == '__main__':
                     print catalog
         elif 'pwd' == cmd[0]:
             print now_path
-        elif 'download' == cmd[0]:
+        elif 'getlink' == cmd[0]:
             pass
         elif 'dld' == cmd[0]:
             pass

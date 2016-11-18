@@ -14,17 +14,24 @@ import pcs
 import tool
 import os
 import config
-
+import urllib
 
 def test_log():
     logger.info('test')
     
     
 def test_download():
-    url = ''
-    dirname = r'E:/tmppic/'
-    filename = r'yang.jpg'
-    req = requests.Session()
+    req, bdstoken = test_login()
+    #url = url
+    dirname=r'e:/tmppic'
+    filename='fortmp.7z'
+    #req = requests.Session()
+    
+    url = 'http://pcs.baidu.com/rest/2.0/pcs/file?path=' + urllib.quote('/forensic.7z') + '&method=download&app_id=266719'
+ 
+     
+
+
     downloader = DownLoader(req, url, dirname, filename)
     t = threading.Thread(target=downloader.run,args=())
     t.setDaemon(True)
@@ -80,9 +87,10 @@ def test_login():
         req = requests.Session()
         req.cookies = cookies
         bdstoken = login_wanpan.get_bdstoken(req)
-        pcs.list_dir(req, bdstoken=bdstoken, headers=config.DEFAULT_HEADERS, path=r'/')
+        return req, bdstoken
+        
     else:
-        login_wanpan.run()
+        return login_wanpan.run()
        
     #req = login_wanpan.run()
     
@@ -107,11 +115,17 @@ def key_check():
     public_key = re.search(r'-----BEGIN PUBLIC KEY-----\n(.*?)-----END PUBLIC KEY-----\n', res)
     print public_key.group(1)
     
-    
+
+def test_get_dlink(req, bdstoken, path):
+    pcs.get_metas(req, bdstoken, path)
 #test_log()
-#test_download()
+test_download()
 
 #key_check()
-test_login()
 
-        
+#req, bdstoken = test_login()
+'''
+test_get_dlink(req, bdstoken, u'/系统')
+test_get_dlink(req, bdstoken, '/forensic.7z')
+   '''
+
