@@ -13,6 +13,7 @@ from log import logger
 from net import simple_request
 from email import Message
 import json
+from log import logger
 
 
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
@@ -63,6 +64,8 @@ class DownLoader(object):
         res = self.req.head(self.url, headers=DEFAULT_HEADERS, verify=False)
         if res.ok:
             self.length = int(res.headers.get('content-length', 0))
+            logger.debug(res.headers)
+            logger.info(self.length)
             return self.length
         else:
             self.length = 0

@@ -13,7 +13,8 @@ import pcs
 import config
 import sys
 import re
-import cmd
+import urllib
+
 
 
 def test_login():
@@ -41,17 +42,41 @@ def phelp():
     cd [路径]------------------切换目录
     ls -----------------------展示当前目录文件
     pwd-----------------------打印当前目录
-    dl [文件名]---------------下载文件至本地
+    dl [文件名] [下载路径]-----------下载文件至本地
     dld [文件夹名]------------递归下载文件至本地
     ?-------------------------打印此帮助信息
     """
+
+
+def download(req, *cmd):
+    '''
+    down 文件名  保存目录
+    '''
+    if len(cmd) < 2 or len(cmd) > 3:
+        print u'参数错误  down 文件名 保存目录(默认e:/tmppic) '
+        return 
+    
+    if len(cmd) == 2:
+        dirname = r'e:/tmppic'
+    else:
+        dirname = cmd[2]
+        
+    filename = cmd[1]
+    
+    filename = now_path + filename
+    filename = filename.encode('utf-8')
+    url = 'http://pcs.baidu.com/rest/2.0/pcs/file?path=' + urllib.quote(filename) + '&method=download&app_id=266719'
+    download = downloader.DownLoader(req, url, dirname, filename)
+    download.run()
+    return
+
 
 
 if __name__ == '__main__':
     now_path = u'/'
     req, bdstoken = test_login()
     error, content = pcs.list_dir(req, bdstoken=bdstoken, headers=config.DEFAULT_HEADERS, path=now_path)  #初始环境置为根目录
-    print error, content
+    print 'error' + str(error)
     while True:
         catalogs = pcs.get_catalogs(content)
         cmd = raw_input('[#'+now_path.encode(sys.stdout.encoding)+']>>')        # 终端提示符
@@ -91,7 +116,7 @@ if __name__ == '__main__':
                         print now_path
 
                         error, content = pcs.list_dir(req, bdstoken=bdstoken, headers=config.DEFAULT_HEADERS, path=now_path)
-                        print error, content  
+                        print error
                         if error is not 0:
                             now_path = temp
                             content = temp_content
@@ -111,11 +136,10 @@ if __name__ == '__main__':
                     print catalog
         elif 'pwd' == cmd[0]:
             print now_path
-        elif 'getlink' == cmd[0]:
-            pass
-        elif 'dld' == cmd[0]:
-            pass
+        elif 'down' == cmd[0]:
+            download(req, cmd)            
         elif '?' == cmd[0]:
             phelp()
         else:
             print 'command not found'
+            phelp()

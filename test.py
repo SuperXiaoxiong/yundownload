@@ -24,10 +24,10 @@ def test_download():
     req, bdstoken = test_login()
     #url = url
     dirname=r'e:/tmppic'
-    filename='fortmp.7z'
+    filename='scorpion.mp4'
     #req = requests.Session()
     
-    url = 'http://pcs.baidu.com/rest/2.0/pcs/file?path=' + urllib.quote('/forensic.7z') + '&method=download&app_id=266719'
+    url = 'http://pcs.baidu.com/rest/2.0/pcs/file?path=' + urllib.quote('/Scorpion.S03E08.720p.HDTV.NCARBBS.X264-DIMENSION.chs.eng') + '&method=download&app_id=266719'
  
      
 
@@ -42,7 +42,7 @@ def test_download():
             sys.exit()
         
         try:
-            cmd = raw_input('请输入')
+            cmd = raw_input(u'请输入')
         except (KeyboardInterrupt, SystemExit):
             print u'quit '
             logger.info('test quit ') 
