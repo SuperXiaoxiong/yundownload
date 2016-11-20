@@ -14,45 +14,85 @@ import config
 import sys
 import re
 import urllib
+import getopt
 
 
 
-def test_login():
+def login(username, password=None):
+    '''
+    登录模块:
+    1.先用username查询是否有保存的cookies和bdstoken
+    2.如果有则用cookies和bdstoken登录
+    3.以上步骤失败则采取用户名和密码登录
+    返回值:
+    errno, req, bdstoken,
+    errno 为0,代表登录成功, 为1代表登录失败
+    req 为会话请求
+    bdstoken 登录凭证
+    '''
     login_wanpan = LoginWanpan()
     
-    
-    token = login_wanpan.load_auth()
-    if os.path.exists('./cookies'):
-        cookies = tool.load_cookies_from_lwp('./cookies')
-        print cookies
-        print token
-        req = requests.Session()
-        req.cookies = cookies
-        bdstoken = login_wanpan.get_bdstoken(req)
-        return req, bdstoken
+    path_cookies = './session_saved/' + username + '_cookies'
+    path_token =  './session_saved/' + username + '_token'
+    if os.path.exists(path_cookies) and os.path.exists(path_token):
+        cookies = tool.load_cookies_from_lwp(path_cookies)
+        token = tool.load_auth(path_token)
         
+        if cookies and token:
+            
+            req = requests.Session()
+            req.cookies = cookies
+            bdstoken = login_wanpan.get_bdstoken(req)
+            
+            if bdstoken:
+                logger.info(u'cookies 和 token有效')
+                return 0, req, bdstoken
+            else:
+                logger.info(u'cookies 或者 token无效')
+                if password:
+                    return login_wanpan.run(username, password)
+                else:
+                    return 1, None, None
+        else:
+            logger.info(u'cookies 或者 token 文件缺失或损坏')
+            if password:
+                return login_wanpan.run(username, password)
+            else:
+                return 1, None, None
     else:
-        return login_wanpan.run()
-
+        logger.info(u'没有登录记录')
+        if password:
+            return login_wanpan.run(username, password)
+        else:
+            return 1, None, None
+        
+        
 
 def phelp():
     print u"""
-    Welcome to yundownload!  This is the help utility.
+    Welcome to yundownload!
     quit----------------------退出程序
     cd [路径]------------------切换目录
     ls -----------------------展示当前目录文件
     pwd-----------------------打印当前目录
-    dl [文件名] [下载路径]-----------下载文件至本地
-    dld [文件夹名]------------递归下载文件至本地
+    down [文件名] [下载路径]-----------下载文件至本地
     ?-------------------------打印此帮助信息
     """
 
 
-def download(req, *cmd):
-    '''
-    down 文件名  保存目录
-    '''
+def usage_login():
+    print 'Usage: manage.py -u username '
+    print '-p --password=password'
+    print '-h --help'
+    sys.exit(0)
+    
+    
+
+def download(req, now_path, *cmd):
+    
+    cmd = cmd[0]  #*  变成了一个元组
     if len(cmd) < 2 or len(cmd) > 3:
+        print cmd
         print u'参数错误  down 文件名 保存目录(默认e:/tmppic) '
         return 
     
@@ -72,11 +112,42 @@ def download(req, *cmd):
 
 
 
-if __name__ == '__main__':
+def main():
+    
+    if not len(sys.argv[1:]):
+        usage_login()
+        
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], 'hu:p:', ['help', 'username', 'password'])
+    except getopt.GetoptError, reason:
+        logger.error(reason.message)
+        usage_login()
+    
+    username = None
+    password = None
+    
+    for o,a in opts:
+        if o in ('-h', '--help'):
+            usage_login()
+        elif o in ('-u', '--username'):
+            username = a
+        elif o in ('-p', '--password'):
+            password = a
+        else:
+            assert False, 'Unhandled Option'
+                
+                
+    if username:       
+        if password:
+            error, req, bdstoken = login(username, password)
+        else:
+            error, req, bdstoken = login(username)
+    else:
+        print 'no username'
+    
     now_path = u'/'
-    req, bdstoken = test_login()
     error, content = pcs.list_dir(req, bdstoken=bdstoken, headers=config.DEFAULT_HEADERS, path=now_path)  #初始环境置为根目录
-    print 'error' + str(error)
+    
     while True:
         catalogs = pcs.get_catalogs(content)
         cmd = raw_input('[#'+now_path.encode(sys.stdout.encoding)+']>>')        # 终端提示符
@@ -137,9 +208,13 @@ if __name__ == '__main__':
         elif 'pwd' == cmd[0]:
             print now_path
         elif 'down' == cmd[0]:
-            download(req, cmd)            
+            download(req, now_path, cmd)            
         elif '?' == cmd[0]:
             phelp()
         else:
             print 'command not found'
             phelp()
+    
+    
+if __name__ == '__main__':
+    main()

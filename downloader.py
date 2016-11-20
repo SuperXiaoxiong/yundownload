@@ -108,7 +108,7 @@ class DownLoader(object):
         '''
         单线程下载指定区块
         ''' 
-        logger.debug('download_block ' + self.status) 
+        
         if self.status == 'LOAD':  
             headers = deepcopy(DEFAULT_HEADERS)
             headers['Range'] = 'bytes=%d-%d' % range_

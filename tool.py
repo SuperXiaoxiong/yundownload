@@ -11,7 +11,11 @@ import random
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_v1_5
 import cookielib
+import os
+import time
 
+
+DELTA = 1 * 24 * 60 * 60
 
 proxies = {
   "http": "http://127.0.0.1:8080",
@@ -56,6 +60,22 @@ def json_loads_single(s):
     '''处理不标准JSON结构化数据'''
     return json.loads(s.replace("'", '"').replace('\t', ''))
 
+
+def load_auth(auth_file):
+        
+    # 如果授权信息被缓存, 并且没过期, 就直接读取它.
+    if os.path.exists(auth_file):
+        if time.time() - os.stat(auth_file).st_mtime < DELTA:
+            with open(auth_file) as fh:
+                token = json.load(fh)
+            return token
+    return None
+
+
+def dump_auth(token, auth_file):
+    with open(auth_file, 'w') as fh:
+        json.dump([token], fh)    
+            
 
 def latency():
     '''返回操作时消耗的时间.

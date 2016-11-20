@@ -15,10 +15,10 @@ import webbrowser
 import subprocess
 import tool
 import random
-import json
 import pcs
 
-DELTA = 1 * 24 * 60 * 60
+
+
 
 def get_ppui_logintime():
     '''ppui_ligintime 这个字段, 是一个随机数.'''
@@ -100,7 +100,7 @@ class LoginWanpan():
         data = res.content
         with open('./qrimg.png', 'wb') as img:
             img.write(data)
-        qr_path = '.'.join(['file:///',os.getcwd(),'qrimg.png'])
+        qr_path = os.path.join('file:///',os.getcwd(),'qrimg.png')
         if sys.platform.startswith('win'):
             webbrowser.open(qr_path)
         elif sys.platform.find('linux')>= 0 and self.graph:
@@ -166,7 +166,8 @@ class LoginWanpan():
         4 - 密码错误
         257 - 需要输入验证码, 此时info里面存放着(vcodetype, codeString))
         '''
-        
+        if verifycode != '':
+            verifycode = verifycode.encode('utf-8')
         
         url = 'https://passport.baidu.com/v2/api/?login'
         data = {
@@ -195,10 +196,11 @@ class LoginWanpan():
                         }
         #res = self.req.post(url, data=data, headers=self.headers, proxies=tool.proxies, verify=False)
         res = self.req.post(url, data=data, headers=self.headers)
+        
         status = re.search(r'err_no=(\d+)', res.content) 
         vcodetype = re.search(r'vcodetype=(.*?)&', res.content)
                         
-        tool.save_cookies_lwp(res.cookies, './cookies')
+        tool.save_cookies_lwp(res.cookies, './session_saved/' + username + '_cookies')
         
         return int(status.group(1)), vcodetype.group(1)
     
@@ -220,30 +222,10 @@ class LoginWanpan():
             return bdstoken.group(1)
         else:
             return None
+ 
+
+    def run(self, username, password):
         
-    def dump_auth(self, token):
-        auth_file = os.path.join('./token')
-        with open(auth_file, 'w') as fh:
-            json.dump([token], fh)
-
-
-
-    def load_auth(self):
-        auth_file = os.path.join('./token')
-        # 如果授权信息被缓存, 并且没过期, 就直接读取它.
-        if os.path.exists(auth_file):
-            if time.time() - os.stat(auth_file).st_mtime < DELTA:
-                with open(auth_file) as fh:
-                    token = json.load(fh)
-                #cookies = RequestCookie(c)
-                
-                return token
-        return None
-
-
-    def run(self):
-        username = config.USERNAME
-        password = config.PASSWORD
         
         self.get_uid()
         token = self.get_token()
@@ -258,42 +240,46 @@ class LoginWanpan():
         if codeString and vcodetype:
             self.get_signin_vcode(codeString)
             #verifyStr = self.refresh_signin_vcode(token, vcodetype)
-            input_verify = raw_input(u'请输入验证码')
+            input_verify = raw_input(u'请输入验证码'.encode(sys.stdin.encoding))
+            input_verify = input_verify.decode(sys.stdin.encoding)
             #input_verify = input_verify.decode(sys.getfilesystemencoding()).encode('utf-8')
             err_no, vcodetype = self.post_login(token, username, password_crypto, rsakey, input_verify, codeString)
         else:
-            err_no = self.post_login(token, username, password_crypto, rsakey)
+            err_no , vcodetype = self.post_login(token, username, password_crypto, rsakey)
         
         while err_no == 257:
             #没有验证码
             codeString = self.refresh_signin_vcode(token, vcodetype)
             self.get_signin_vcode(codeString)
-            input_verify = raw_input(u'请输入验证码')
+            input_verify = raw_input(u'请输入验证码'.encode(sys.stdin.encoding))
+            input_verify = input_verify.decode(sys.stdin.encoding)
             #input_verify = input_verify.decode(sys.getfilesystemencoding()).encode('utf-8')
             err_no, vcodetype = self.post_login(token, username, password_crypto, rsakey, input_verify, codeString)
             
-        while err_no == 6:
+        if err_no == 6:
             #验证码错误
             
             '''
             从返回中获取vcodetype
             '''
-            pass
-            '''
+            print u'验证码错误'
+            
             codeString = self.refresh_signin_vcode(token, vcodetype)
             self.get_signin_vcode(codeString)
-            input_verify = raw_input(u'请输入验证码')
-            #input_verify = input_verify.decode(sys.getfilesystemencoding()).encode('utf-8')
+            input_verify = raw_input(u'请输入验证码'.encode(sys.stdin.encoding))
+            input_verify = input_verify.decode(sys.stdin.encoding)
             err_no, vcodetype = self.post_login(token, username, password_crypto, rsakey, input_verify, codeString)
-            '''
+            
             
             
         
          
         if err_no == 0:
+            '''
+            通过token获取bdstoken
+            '''
             bdstoken = self.get_bdstoken(self.req)
-            
-            self.dump_auth(token)
+            tool.dump_auth(token, './session_saved/' + username + '_token' )
             
             pcs.list_dir(self.req, headers=self.headers, bdstoken=bdstoken, path=r'/')
-            return self.req, bdstoken
+            return 0, self.req, bdstoken
