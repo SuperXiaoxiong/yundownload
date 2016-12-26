@@ -17,6 +17,8 @@ shell 控制模块基本完成 11-19
 
 登录模块重新改写 11-20
 
+修改部分BUG 12-26
+
 ### 使用方法
 
 python mannage.py -u username -p password
@@ -64,7 +66,13 @@ PCS下载，shell控制模块基本完成 11-19
 
 使用python manage.py 运行程序
 
+修改影响使用的部分BUG 12-26
+
+token和cookie过期删除
+
+中文下载路径支持
+
 TODO:
 
 
-1. 优化代码和readme
+1. 详细安装文档介绍，添加linux支持
