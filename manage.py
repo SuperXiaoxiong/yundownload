@@ -106,16 +106,18 @@ def download(req, now_path, *cmd):
     cmd = cmd[0]  #*  变成了一个元组
     if len(cmd) < 2 or len(cmd) > 3:
         print cmd
-        print u'参数错误  down 文件名 保存目录(默认e:/tmppic) '
+        print u'参数错误  down 文件名 保存目录(默认当前目录) '
         return 
     
     if len(cmd) == 2:
-        dirname = r'e:/tmppic'
+        dirname = ur'./下载/'
     else:
         dirname = cmd[2]
         
     filename = cmd[1]
-    
+    '''
+    以上参数已经是unicode编码
+    '''
     filename = filename.encode('utf-8')
     dirname = dirname.encode('utf-8')
     now_path = now_path.encode('utf-8')
@@ -130,6 +132,8 @@ def download(req, now_path, *cmd):
 
 def main():
     
+    if not os.path.exists('./session_saved'):
+        os.makedirs('session_saved')
     
     if not len(sys.argv[1:]):
         usage_login()
