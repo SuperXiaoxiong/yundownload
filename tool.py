@@ -25,14 +25,14 @@ proxies = {
 
 
 def save_cookies_lwp(cookiejar, filename):
-        lwp_cookiejar = cookielib.LWPCookieJar()
-        for c in cookiejar:
-            args = dict(vars(c).items())
-            args['rest'] = args['_rest']
-            del args['_rest']
-            c = cookielib.Cookie(**args)
-            lwp_cookiejar.set_cookie(c)
-        lwp_cookiejar.save(filename, ignore_discard=True)
+    lwp_cookiejar = cookielib.LWPCookieJar()
+    for c in cookiejar:
+        args = dict(vars(c).items())
+        args['rest'] = args['_rest']
+        del args['_rest']
+        c = cookielib.Cookie(**args)
+        lwp_cookiejar.set_cookie(c)
+    lwp_cookiejar.save(filename, ignore_discard=True)
 
 def load_cookies_from_lwp(filename):
     lwp_cookiejar = cookielib.LWPCookieJar()

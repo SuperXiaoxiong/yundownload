@@ -49,18 +49,31 @@ def login(username, password=None):
                 return 0, req, bdstoken
             else:
                 logger.info(u'cookies 或者 token无效')
+                if os.path.exists(path_cookies):
+                    os.remove(path_cookies)
+                if os.path.exists(path_token):
+                    os.remove(path_token)
+                    
                 if password:
                     return login_wanpan.run(username, password)
                 else:
                     return 1, None, None
         else:
             logger.info(u'cookies 或者 token 文件缺失或损坏')
+            if os.path.exists(path_cookies):
+                os.remove(path_cookies)
+            if os.path.exists(path_token):
+                os.remove(path_token)
             if password:
                 return login_wanpan.run(username, password)
             else:
                 return 1, None, None
     else:
         logger.info(u'没有登录记录')
+        if os.path.exists(path_cookies):
+            os.remove(path_cookies)
+        if os.path.exists(path_token):
+            os.remove(path_token)
         if password:
             return login_wanpan.run(username, password)
         else:
@@ -103,16 +116,20 @@ def download(req, now_path, *cmd):
         
     filename = cmd[1]
     
-    filename = now_path + filename
     filename = filename.encode('utf-8')
-    url = 'http://pcs.baidu.com/rest/2.0/pcs/file?path=' + urllib.quote(filename) + '&method=download&app_id=266719'
-    download = downloader.DownLoader(req, url, dirname, filename)
-    download.run()
+    dirname = dirname.encode('utf-8')
+    now_path = now_path.encode('utf-8')
+    
+    '''下载链接需要用utf-8编码'''
+    url = 'http://pcs.baidu.com/rest/2.0/pcs/file?path=' + urllib.quote(now_path + filename) + '&method=download&app_id=266719'
+    loading = downloader.DownLoader(req, url, dirname.decode('utf-8'), filename.decode('utf-8'))
+    loading.run()
     return
 
 
 
 def main():
+    
     
     if not len(sys.argv[1:]):
         usage_login()
@@ -136,6 +153,7 @@ def main():
         else:
             assert False, 'Unhandled Option'
                 
+    
                 
     if username:       
         if password:
@@ -144,6 +162,14 @@ def main():
             error, req, bdstoken = login(username)
     else:
         print 'no username'
+        usage_login()
+        
+    while error == 1:
+        print u'登录失败,请重试！'
+        username = raw_input(u'请输入用户名'.encode(sys.stdin.encoding))
+        password = raw_input(u'请输入密码'.encode(sys.stdin.encoding))
+        error, req, bdstoken = login(username, password)
+    
     
     now_path = u'/'
     error, content = pcs.list_dir(req, bdstoken=bdstoken, headers=config.DEFAULT_HEADERS, path=now_path)  #初始环境置为根目录
@@ -179,7 +205,7 @@ def main():
                     content = temp_content
                     print 'No such file or directory'
             else:
-                print catalogs
+                #print catalogs
                 if cmd[1] in catalogs:                    # 进入特定目录
   
                     try:

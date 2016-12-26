@@ -7,7 +7,7 @@ import os
 
 
 
-LOGGING_LEVEL = 'DEBUG'
+LOGGING_LEVEL = 'INFO'
 LOGGING_FILE = os.path.expanduser(r'./.config/yundownload/yundownload.log')
 
 DEFAULT_HEADERS = {

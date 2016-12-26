@@ -14,12 +14,15 @@ from net import simple_request
 from email import Message
 import json
 from log import logger
-
+import getopt
 
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 def get_tmp_filepath(dir_name, file_name):
     '''返回最终路径名及临时路径名'''
+    '''注意 :对于文件的操作 ，字符串就使用unicode编码'''
+    if not os.path.exists(dir_name):
+        os.makedirs(dir_name)
     filepath = os.path.join(dir_name, file_name)
     return filepath, filepath + '.part', filepath + '.yundownload-stat'
 
@@ -31,6 +34,12 @@ class DownLoader(object):
     '''
     
     def __init__(self, req, url, dirname, filename, block_size=BLOCK_SIZE):
+        '''
+        req 会话
+        url 下载请求url
+        dirname 下载目录名
+        filename 下载文件名
+        '''
         
         self.req = req
         self.url = url
@@ -125,14 +134,17 @@ class DownLoader(object):
                     self.f.write(res.content)
                     self.f.flush()
                     
+                    self.block_done = self.block_done + 1
+                    self.ranges_done.append(range_)
+                    self.ranges_undo.remove(range_)
+                    
                     if self.finished():
                         self.pbar.update(self.length-1)               
                     else:
                         self.pbar.update(self.block_size * self.block_done) 
                     
-                    self.block_done = self.block_done + 1  
-                    self.ranges_done.append(range_)
-                    self.ranges_undo.remove(range_)
+                      
+                    
                     self.lock.release()
                     break
                 else:
@@ -161,7 +173,7 @@ class DownLoader(object):
             
             self.conf_fh.seek(0)
             self.conf_fh.write(json.dumps(conf_info))
-        
+            self.conf_fh.flush()
         
         
     
@@ -236,8 +248,37 @@ class DownLoader(object):
         
         if self.finished():
             self.pbar.finish()
+            if os.path.exists(filepath):
+                os.remove(filepath)
             os.rename(tmp_filepath, filepath)
             if os.path.exists(conf_filepath):
                 os.remove(conf_filepath)
         else:
             pass
+
+if __name__ == '__main__':
+    req = requests.Session()
+    '''
+    url = raw_input('url')
+    dirname = raw_input('')
+    filename = raw_input()
+    '''
+    opts, args = getopt.getopt(sys.argv[1:], 'u:d:f', ['url', 'dirname', 'filename'])
+    
+    for o,a in opts:
+        if o in ('-u', '--url'):
+            url = a
+        elif o in ('-d', '--dirname'):
+            dirname = a
+        elif o in ('-f', '--filename'):
+            filename = a
+        else:
+            assert False, 'Unhandled Option'
+            
+    if url and dirname and filename:
+        dirname = dirname.decode(sys.stdin.encoding)
+        filename = filename.decode(sys.stdin.encoding)
+        url = url.decode(sys.stdin.encoding).encode('utf-8')
+        loading = DownLoader(req, url, filename=filename, dirname = dirname)
+        loading.run()
+    
