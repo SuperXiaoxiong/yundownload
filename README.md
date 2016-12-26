@@ -7,6 +7,17 @@
 
 有什么好的建议，或者发现bug,请在issue中提出，欢迎contributors！
 
+### 安装依赖
+
+下载功能已经完成
+
+sudo pip install requests==2.11.1
+sudo pip install progressbar==2.3
+sudo pip install pycrypto
+
+遇到src/MD2.c:31:20: fatal error: Python.h: No such file or directory
+sudo apt-get install Python-dev //安装python开发版包
+
 ### 进度说明
 
 完成下载器 11-09
@@ -17,7 +28,7 @@ shell 控制模块基本完成 11-19
 
 登录模块重新改写 11-20
 
-修改部分BUG 12-26
+修改部分BUG,下载功能已经完成 12-26
 
 ### 使用方法
 
@@ -72,7 +83,4 @@ token和cookie过期删除
 
 中文下载路径支持
 
-TODO:
-
-
-1. 详细安装文档介绍，添加linux支持
+下载模块完成，支持linux图形化(只有终端二维码如何显示？)

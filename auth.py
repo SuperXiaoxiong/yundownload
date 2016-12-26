@@ -103,7 +103,7 @@ class LoginWanpan():
         qr_path = os.path.join('file:///',os.getcwd(),'qrimg.png')
         if sys.platform.startswith('win'):
             webbrowser.open(qr_path)
-        elif sys.platform.find('linux')>= 0 and self.graph:
+        elif sys.platform.find('linux')>= 0 :
             subprocess.call(['xdg-open', qr_path])    
         
         
