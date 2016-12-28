@@ -125,7 +125,7 @@ class DownLoader(object):
                 try:
                     res = self.req.get(self.url, headers=headers, verify=False)
                 except Exception, e:
-                    logger.error(e,Message)
+                    logger.error(e.message)
                     logger.error('bytes=%d-%d download error' % range_  )
                     
                 if res.ok:

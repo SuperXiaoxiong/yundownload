@@ -12,10 +12,13 @@
 下载功能已经完成
 
 sudo pip install requests==2.11.1
+
 sudo pip install progressbar==2.3
+
 sudo pip install pycrypto
 
 遇到src/MD2.c:31:20: fatal error: Python.h: No such file or directory
+
 sudo apt-get install Python-dev //安装python开发版包
 
 ### 进度说明
